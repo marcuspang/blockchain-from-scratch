@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
 //! When you wear clothes they get dirty. When you wash them they get wet. When you dry them, they're
 //! ready to be worn again. Or course washing and wearing clothes takes its toll on the clothes, and
 //! eventually they get tattered.
@@ -40,7 +42,45 @@ impl StateMachine for ClothesMachine {
     type Transition = ClothesAction;
 
     fn next_state(starting_state: &ClothesState, t: &ClothesAction) -> ClothesState {
-        todo!("Exercise 3")
+        match t {
+            ClothesAction::Wear => match starting_state {
+                ClothesState::Clean(life) | ClothesState::Dirty(life) | ClothesState::Wet(life) => {
+                    if *life == 1 {
+                        ClothesState::Tattered
+                    } else {
+                        ClothesState::Dirty(life - 1)
+                    }
+                }
+                ClothesState::Tattered => ClothesState::Tattered,
+            },
+            ClothesAction::Wash => match starting_state {
+                ClothesState::Clean(life) | ClothesState::Dirty(life) | ClothesState::Wet(life) => {
+                    if *life == 1 {
+                        ClothesState::Tattered
+                    } else {
+                        ClothesState::Wet(life - 1)
+                    }
+                }
+                ClothesState::Tattered => ClothesState::Tattered,
+            },
+            ClothesAction::Dry => match starting_state {
+                ClothesState::Clean(life) | ClothesState::Wet(life) => {
+                    if *life == 1 {
+                        ClothesState::Tattered
+                    } else {
+                        ClothesState::Clean(life - 1)
+                    }
+                }
+                ClothesState::Dirty(life) => {
+                    if *life == 1 {
+                        ClothesState::Tattered
+                    } else {
+                        ClothesState::Dirty(life - 1)
+                    }
+                }
+                ClothesState::Tattered => ClothesState::Tattered,
+            },
+        }
     }
 }
 
