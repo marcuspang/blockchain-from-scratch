@@ -9,7 +9,10 @@
 //! Each user is associated with an account balance and users are able to send money to other users.
 
 use super::{StateMachine, User};
-use std::collections::HashMap;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    collections::HashMap,
+};
 
 /// This state machine models a multi-user currency system. It tracks the balance of each
 /// user and allows users to send funds to one another.
@@ -45,7 +48,59 @@ impl StateMachine for AccountedCurrency {
     type Transition = AccountingTransaction;
 
     fn next_state(starting_state: &Balances, t: &AccountingTransaction) -> Balances {
-        todo!("Exercise 1")
+        match t {
+            AccountingTransaction::Burn { burner, amount } => {
+                let mut new_state = starting_state.clone();
+                let mut amount_burned = 0;
+                new_state.entry(*burner).and_modify(|value| {
+                    amount_burned = (*value).min(*amount);
+                    *value -= amount_burned;
+                });
+                if let Some(value) = new_state.get(burner) {
+                    if *value == 0 {
+                        new_state.remove(burner);
+                    }
+                }
+                new_state
+            }
+            AccountingTransaction::Mint { minter, amount } => {
+                let mut new_state = starting_state.clone();
+                if *amount != 0 {
+                    new_state
+                        .entry(*minter)
+                        .and_modify(|value| *value += amount)
+                        .or_insert(*amount);
+                }
+
+                new_state
+            }
+            AccountingTransaction::Transfer {
+                sender,
+                receiver,
+                amount,
+            } => {
+                let mut new_state = starting_state.clone();
+                let mut amount_burned = 0;
+                new_state.entry(*sender).and_modify(|value| {
+                    if *amount <= *value {
+                        *value -= *amount;
+                        amount_burned = *amount;
+                    }
+                });
+                if let Some(value) = new_state.get(sender) {
+                    if *value == 0 {
+                        new_state.remove(sender);
+                    }
+                }
+                if amount_burned != 0 {
+                    new_state
+                        .entry(*receiver)
+                        .and_modify(|value| *value += amount_burned)
+                        .or_insert(amount_burned);
+                }
+                new_state
+            }
+        }
     }
 }
 
