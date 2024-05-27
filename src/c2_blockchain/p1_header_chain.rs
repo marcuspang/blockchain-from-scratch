@@ -25,7 +25,7 @@ pub struct Header {
 impl Header {
     /// Returns a new valid genesis header.
     fn genesis() -> Self {
-        Header {
+        Self {
             parent: 0,
             height: 0,
             extrinsics_root: (),
@@ -36,7 +36,7 @@ impl Header {
 
     /// Create and return a valid child header.
     fn child(&self) -> Self {
-        Header {
+        Self {
             parent: hash(&self),
             height: self.height + 1,
             extrinsics_root: (),
