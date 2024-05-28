@@ -4,7 +4,11 @@
 //! When a state transition spends bills, new bills are created in lesser or equal amount.
 
 use super::{StateMachine, User};
-use std::collections::HashSet;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    collections::HashSet,
+    ops::{Mul, Sub},
+};
 
 /// This state machine models a multi-user currency system. It tracks a set of bills in
 /// circulation, and updates that set when money is transferred.
@@ -94,7 +98,97 @@ impl StateMachine for DigitalCashSystem {
     type Transition = CashTransaction;
 
     fn next_state(starting_state: &Self::State, t: &Self::Transition) -> Self::State {
-        todo!("Exercise 1")
+        match t {
+            CashTransaction::Mint { minter, amount } => {
+                let mut state = starting_state.clone();
+                let bill = Bill {
+                    amount: *amount,
+                    owner: *minter,
+                    serial: starting_state.next_serial(),
+                };
+                state.add_bill(bill);
+                state
+            }
+            CashTransaction::Transfer { spends, receives } => {
+                let mut bills = starting_state.bills.clone();
+
+                // validate receives
+                let mut next_serial = starting_state.next_serial();
+                for receive in receives.iter() {
+                    if receive.amount == 0 {
+                        return starting_state.clone();
+                    }
+                    // receiving existing bill
+                    if bills.iter().any(|x| x.serial == receive.serial) {
+                        return starting_state.clone();
+                    }
+                    // receiving some spend
+                    if spends.iter().any(|x| x.serial == receive.serial) {
+                        return starting_state.clone();
+                    }
+                    if receive.serial != next_serial {
+                        return starting_state.clone();
+                    }
+                    next_serial = next_serial + 1;
+                }
+
+                // validate spends
+                let mut seen_spend_serials = HashSet::new();
+                for spend in spends.iter() {
+                    if spend.amount == 0 {
+                        return starting_state.clone();
+                    }
+                    if !bills.contains(spend) {
+                        return starting_state.clone();
+                    }
+                    if seen_spend_serials.contains(&spend.serial) {
+                        return starting_state.clone();
+                    }
+                    seen_spend_serials.insert(spend.serial);
+                }
+
+                let spends = spends.clone();
+                let mut spends = spends.iter();
+                let mut current_spend = spends.next();
+
+                for receive in receives.iter() {
+                    let mut amount_left = receive.amount;
+
+                    while amount_left > 0 {
+                        let spend = current_spend.borrow_mut();
+                        if let Some(spend) = spend {
+                            if spend.amount > amount_left {
+                                spend.amount.sub(amount_left);
+                                amount_left = 0;
+                            } else if spend.amount == amount_left {
+                                amount_left -= spend.amount;
+                                bills.remove(spend);
+                                current_spend = spends.next();
+                            } else {
+                                return starting_state.clone();
+                            }
+                        } else {
+                            // receive values > spend values
+                            return starting_state.clone();
+                        }
+                    }
+                    // now that receive has been completed, we add to the bills
+                    bills.insert(receive.clone());
+                }
+
+                let mut removed = 0;
+                while let Some(spend) = current_spend {
+                    bills.remove(spend);
+                    current_spend = spends.clone().next();
+                }
+
+                let bills = bills.iter().map(|x| x.clone());
+
+                let mut state = State::from_iter(bills);
+                state.set_serial(next_serial);
+                state
+            }
+        }
     }
 }
 

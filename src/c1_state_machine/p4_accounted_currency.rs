@@ -9,10 +9,7 @@
 //! Each user is associated with an account balance and users are able to send money to other users.
 
 use super::{StateMachine, User};
-use std::{
-    borrow::{Borrow, BorrowMut},
-    collections::HashMap,
-};
+use std::collections::HashMap;
 
 /// This state machine models a multi-user currency system. It tracks the balance of each
 /// user and allows users to send funds to one another.
