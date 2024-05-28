@@ -158,7 +158,7 @@ impl StateMachine for DigitalCashSystem {
                         let spend = current_spend.borrow_mut();
                         if let Some(spend) = spend {
                             if spend.amount > amount_left {
-                                spend.amount.sub(amount_left);
+                                let _ = spend.amount.sub(amount_left);
                                 amount_left = 0;
                             } else if spend.amount == amount_left {
                                 amount_left -= spend.amount;
@@ -176,7 +176,6 @@ impl StateMachine for DigitalCashSystem {
                     bills.insert(receive.clone());
                 }
 
-                let mut removed = 0;
                 while let Some(spend) = current_spend {
                     bills.remove(spend);
                     current_spend = spends.clone().next();
