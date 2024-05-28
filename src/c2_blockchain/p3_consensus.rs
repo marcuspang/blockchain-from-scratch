@@ -37,12 +37,24 @@ pub struct Header {
 impl Header {
     /// Returns a new valid genesis header.
     fn genesis() -> Self {
-        todo!("Exercise 1")
+        Self {
+            parent: 0,
+            height: 0,
+            extrinsic: 0,
+            state: 0,
+            consensus_digest: 0,
+        }
     }
 
     /// Create and return a valid child header.
     fn child(&self, extrinsic: u64) -> Self {
-        todo!("Exercise 2")
+        Self {
+            parent: hash(&self),
+            height: self.height + 1,
+            extrinsic,
+            state: self.state + extrinsic,
+            consensus_digest: hash(&self) / 100,
+        }
     }
 
     /// Verify that all the given headers form a valid chain from this header to the tip.
@@ -50,7 +62,17 @@ impl Header {
     /// In addition to all the rules we had before, we now need to check that the block hash
     /// is below a specific threshold.
     fn verify_sub_chain(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 3")
+        if chain.len() == 0 {
+            return true;
+        }
+        if chain[0].parent != hash(&self)
+            || chain[0].height != self.height + 1
+            || chain[0].state != self.state + chain[0].extrinsic
+            || chain[0].consensus_digest != hash(&self) / 100
+        {
+            return false;
+        }
+        chain[0].verify_sub_chain(&chain[1..])
     }
 
     // After the blockchain ran for a while, a political rift formed in the community.
@@ -62,13 +84,17 @@ impl Header {
     /// verify that the given headers form a valid chain.
     /// In this case "valid" means that the STATE MUST BE EVEN.
     fn verify_sub_chain_even(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 4")
+        (self.height <= FORK_HEIGHT || self.state % 2 == 0)
+            && (chain.len() == 0 || chain[0].verify_sub_chain_even(&chain[1..]))
+            && self.verify_sub_chain(chain)
     }
 
     /// verify that the given headers form a valid chain.
     /// In this case "valid" means that the STATE MUST BE ODD.
     fn verify_sub_chain_odd(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 5")
+        (self.height <= FORK_HEIGHT || self.state % 2 == 1)
+            && (chain.len() == 0 || chain[0].verify_sub_chain_odd(&chain[1..]))
+            && self.verify_sub_chain(chain)
     }
 }
 
@@ -89,7 +115,17 @@ impl Header {
 /// G -- 1 -- 2
 ///            \-- 3'-- 4'
 fn build_contentious_forked_chain() -> (Vec<Header>, Vec<Header>, Vec<Header>) {
-    todo!("Exercise 6")
+    let g = Header::genesis();
+    let b1 = g.child(0);
+    let b2 = b1.child(0);
+
+    let b3_even = b2.child(2);
+    let b3_odd = b2.child(1);
+
+    let prefix = vec![g, b1, b2];
+    let even = vec![b3_even];
+    let odd = vec![b3_odd];
+    (prefix, even, odd)
 }
 
 // To run these tests: `cargo test bc_3`
@@ -298,6 +334,8 @@ fn bc_3_verify_forked_chain() {
     // Both chains are individually valid according to the original rules.
     assert!(g.verify_sub_chain(&full_even_chain[..]));
     assert!(g.verify_sub_chain(&full_odd_chain[..]));
+
+    println!("{:?}", &full_odd_chain[..]);
 
     // Only the even chain is valid according to the even rules
     assert!(g.verify_sub_chain_even(&full_even_chain[..]));

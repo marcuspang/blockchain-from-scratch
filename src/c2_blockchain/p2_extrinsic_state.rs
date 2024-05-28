@@ -69,16 +69,7 @@ impl Header {
         {
             return false;
         }
-
-        for i in 1..chain.len() {
-            if chain[i].parent != hash(&chain[i - 1])
-                || chain[i].height != chain[i - 1].height + 1
-                || chain[i].state != chain[i - 1].state + chain[i].extrinsic
-            {
-                return false;
-            }
-        }
-        true
+        chain[0].verify_sub_chain(&chain[1..])
     }
 }
 
@@ -290,5 +281,5 @@ fn bc_2_verify_forked_chain() {
     // Is that enough? Is it possible that the two chains have the same final block,
     // but differ somewhere else?
     assert_ne!(c1.last(), c2.last());
-    // Answer: Yes, we need to make sure that the last final block is valid for the blocks leading up to it.
+    // Answer: No, there are guaranteed to be the same.
 }

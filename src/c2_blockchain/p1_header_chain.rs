@@ -56,13 +56,7 @@ impl Header {
         if chain[0].parent != hash(self) || chain[0].height != self.height + 1 {
             return false;
         }
-        for i in 1..chain.len() {
-            if chain[i].parent != hash(&chain[i - 1]) || chain[i].height != chain[i - 1].height + 1
-            {
-                return false;
-            }
-        }
-        true
+        chain[0].verify_sub_chain(&chain[1..])
     }
 }
 
